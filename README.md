@@ -56,7 +56,7 @@ Recommended when installing offline from CI-built wheels.
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/Lang-bt/bittensor-burn.git
+   git clone https://github.com/Lang-bt/bittensor-burn-message.git
    cd bittensor-burn
    ```
 
