@@ -57,7 +57,7 @@ Recommended when installing offline from CI-built wheels.
 
    ```bash
    git clone https://github.com/Lang-bt/bittensor-burn-message.git
-   cd bittensor-burn
+   cd bittensor-burn-message
    ```
 
 2. Copy downloaded `.whl` files into `dist/` (OS-specific CI artifact: `wheels-windows-latest`, `wheels-ubuntu-latest`, or `wheels-macos-latest`).
