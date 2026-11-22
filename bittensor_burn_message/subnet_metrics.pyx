@@ -102,24 +102,56 @@ def with_retries(
     return payload
 
 
+def _request_failed(payload: dict[str, Any]) -> bool:
+    if payload.get("error") or payload.get("parse_error"):
+        return True
+    status = payload.get("http_status") or payload.get("status_code")
+    return isinstance(status, int) and status >= 400
+
+
 def fetch_all_subnets_latest(
     auth: str,
     *,
     timeout: float = 60.0,
     max_retries: int = 6,
 ) -> list[dict[str, Any]] | dict[str, Any]:
-    p = with_retries(
-        "/api/subnet/latest/v1",
-        {"limit": 1024, "order": "netuid_asc"},
-        auth,
-        max_retries=max_retries,
-        timeout=timeout,
-    )
-    if p.get("error"):
-        return {"error": p.get("error"), "response": p}
-    rows = p.get("data") or []
+    """Fetch current subnet metrics (owner burn via incentive_burn).
+
+    Taostats retired GET /api/subnet/latest/v1 (410). Replacement is
+    GET /v1/subnets/metrics (max limit 200; page until next_page is null).
+    """
+    rows: list[dict[str, Any]] = []
+    page = 1
+    last_payload: dict[str, Any] = {}
+    while True:
+        last_payload = with_retries(
+            "/v1/subnets/metrics",
+            {
+                "limit": 200,
+                "page": page,
+                "order_by": "netuid",
+                "order_dir": "asc",
+            },
+            auth,
+            max_retries=max_retries,
+            timeout=timeout,
+        )
+        if _request_failed(last_payload):
+            return {
+                "error": last_payload.get("error")
+                or last_payload.get("message")
+                or "request_failed",
+                "response": last_payload,
+            }
+        batch = last_payload.get("data") or []
+        rows.extend(batch)
+        pagination = last_payload.get("pagination") or {}
+        next_page = pagination.get("next_page")
+        if next_page is None or not batch:
+            break
+        page = int(next_page)
     if not rows:
-        return {"error": "no_subnet_rows", "response": p}
+        return {"error": "no_subnet_rows", "response": last_payload}
     return rows
 
 
